@@ -1,213 +1,383 @@
-import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from './firebase';
 import {
-  DEFAULT_SETTINGS,
-  DEFAULT_ORGANISATIONS,
-  DEFAULT_UMKM,
-  DEFAULT_NEWS,
-  DEFAULT_EVENTS,
-  SystemSettings,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  writeBatch,
+  query,
+  where,
+} from 'firebase/firestore';
+import {
+  dummyProfile,
+  dummyOrganizations,
+  dummyOrganizationDetails,
+  dummyUMKM,
+  dummyProducts,
+  dummyNews,
+  VillageProfile,
   Organization,
-  UMKMItem,
-  NewsItem,
-  EventItem,
-} from "./data-defaults";
+  OrganizationDetail,
+  UMKM,
+  Product,
+  News,
+  User,
+} from './dummy-data';
 
-// Helper to convert Firestore timestamp or string date to standard ISO string
-export function formatFirestoreDate(val: any): string {
-  if (!val) return new Date().toISOString();
-  if (typeof val.toDate === "function") {
-    return val.toDate().toISOString();
-  }
-  if (val.seconds) {
-    return new Date(val.seconds * 1000).toISOString();
-  }
-  return new Date(val).toISOString();
-}
-
-export async function getSettings(): Promise<SystemSettings> {
+// ==========================================
+// 1. VILLAGE PROFILE FUNCTIONS
+// ==========================================
+export async function getVillageProfile(): Promise<VillageProfile> {
   try {
-    const docRef = doc(db, "settings", "beranda");
-    const docSnap = await getDoc(docRef);
+    const profileRef = doc(db, 'profile', 'village');
+    const docSnap = await getDoc(profileRef);
+    
     if (docSnap.exists()) {
-      return { ...DEFAULT_SETTINGS, ...docSnap.data() } as SystemSettings;
+      return docSnap.data() as VillageProfile;
+    } else {
+      // Seed initial data
+      await setDoc(profileRef, dummyProfile);
+      return dummyProfile;
     }
-  } catch (err) {
-    console.error("Firestore settings load failed, using defaults:", err);
+  } catch (error) {
+    console.error('Error fetching village profile from Firestore:', error);
+    return dummyProfile;
   }
-  return DEFAULT_SETTINGS;
 }
 
+export async function saveVillageProfile(profile: VillageProfile): Promise<void> {
+  const profileRef = doc(db, 'profile', 'village');
+  await setDoc(profileRef, profile);
+}
+
+// ==========================================
+// 2. ORGANIZATIONS & MEMBERS FUNCTIONS
+// ==========================================
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    const colRef = collection(db, "organizations");
-    const querySnapshot = await getDocs(colRef);
-    if (!querySnapshot.empty) {
-      const orgs: Organization[] = [];
-      querySnapshot.forEach((docSnap) => {
-        orgs.push({ id: docSnap.id, ...docSnap.data() } as Organization);
+    const orgsCol = collection(db, 'organizations');
+    const qSnapshot = await getDocs(orgsCol);
+    
+    if (qSnapshot.empty) {
+      // Seed organizations
+      const batch = writeBatch(db);
+      dummyOrganizations.forEach((org) => {
+        const docRef = doc(orgsCol, org.id);
+        batch.set(docRef, org);
       });
-      return orgs;
+      await batch.commit();
+      return dummyOrganizations;
     }
-  } catch (err) {
-    console.error("Firestore organizations load failed, using defaults:", err);
+
+    const list: Organization[] = [];
+    qSnapshot.forEach((doc) => {
+      list.push(doc.data() as Organization);
+    });
+    return list;
+  } catch (error) {
+    console.error('Error fetching organizations:', error);
+    return dummyOrganizations;
   }
-  return DEFAULT_ORGANISATIONS;
 }
 
-export async function getOrganizationBySlug(slug: string): Promise<Organization | null> {
-  try {
-    const colRef = collection(db, "organizations");
-    const q = query(colRef, where("slug", "==", slug));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      const docSnap = querySnapshot.docs[0];
-      return { id: docSnap.id, ...docSnap.data() } as Organization;
-    }
-  } catch (err) {
-    console.error(`Firestore org by slug ${slug} failed:`, err);
-  }
+export async function saveOrganization(org: Organization): Promise<void> {
+  const docRef = doc(db, 'organizations', org.id);
+  await setDoc(docRef, org);
+}
+
+export async function deleteOrganization(orgId: string): Promise<void> {
+  // Delete the organization
+  const docRef = doc(db, 'organizations', orgId);
+  await deleteDoc(docRef);
+
+  // Delete all members inside this organization
+  const detailsCol = collection(db, 'organization_details');
+  const q = query(detailsCol, where('orgId', '==', orgId));
+  const qSnapshot = await getDocs(q);
   
-  // Search in default fallback
-  const defaultOrg = DEFAULT_ORGANISATIONS.find((o) => o.slug === slug);
-  return defaultOrg || null;
+  const batch = writeBatch(db);
+  qSnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  await batch.commit();
 }
 
-export async function getUMKM(): Promise<UMKMItem[]> {
+export async function getOrganizationDetails(): Promise<OrganizationDetail[]> {
   try {
-    const colRef = collection(db, "umkm");
-    const querySnapshot = await getDocs(colRef);
-    if (!querySnapshot.empty) {
-      const items: UMKMItem[] = [];
-      querySnapshot.forEach((docSnap) => {
-        items.push({ id: docSnap.id, ...docSnap.data() } as UMKMItem);
+    const detailsCol = collection(db, 'organization_details');
+    const qSnapshot = await getDocs(detailsCol);
+    
+    if (qSnapshot.empty) {
+      // Seed organization details
+      const batch = writeBatch(db);
+      dummyOrganizationDetails.forEach((member) => {
+        const docRef = doc(detailsCol, member.id);
+        batch.set(docRef, member);
       });
-      return items;
+      await batch.commit();
+      return dummyOrganizationDetails;
     }
-  } catch (err) {
-    console.error("Firestore UMKM load failed, using defaults:", err);
+
+    const list: OrganizationDetail[] = [];
+    qSnapshot.forEach((doc) => {
+      list.push(doc.data() as OrganizationDetail);
+    });
+    return list;
+  } catch (error) {
+    console.error('Error fetching organization details:', error);
+    return dummyOrganizationDetails;
   }
-  return DEFAULT_UMKM;
 }
 
-export async function getUMKMById(id: string): Promise<UMKMItem | null> {
+export async function saveOrganizationDetailsForOrg(orgId: string, updatedMembers: OrganizationDetail[]): Promise<void> {
+  // Delete existing members for this organization first
+  const detailsCol = collection(db, 'organization_details');
+  const q = query(detailsCol, where('orgId', '==', orgId));
+  const qSnapshot = await getDocs(q);
+
+  const batch = writeBatch(db);
+  qSnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  await batch.commit();
+
+  // Save new/updated members
+  const saveBatch = writeBatch(db);
+  updatedMembers.forEach((m) => {
+    const docRef = doc(detailsCol, m.id);
+    saveBatch.set(docRef, m);
+  });
+  await saveBatch.commit();
+}
+
+// ==========================================
+// 3. UMKM & PRODUCTS FUNCTIONS
+// ==========================================
+export async function getUMKMs(): Promise<UMKM[]> {
   try {
-    const docRef = doc(db, "umkm", id);
+    const umkmCol = collection(db, 'umkm');
+    const qSnapshot = await getDocs(umkmCol);
+    
+    if (qSnapshot.empty) {
+      // Seed UMKM
+      const batch = writeBatch(db);
+      dummyUMKM.forEach((u) => {
+        const docRef = doc(umkmCol, u.id);
+        batch.set(docRef, u);
+      });
+      await batch.commit();
+      return dummyUMKM;
+    }
+
+    const list: UMKM[] = [];
+    qSnapshot.forEach((doc) => {
+      list.push(doc.data() as UMKM);
+    });
+    return list;
+  } catch (error) {
+    console.error('Error fetching UMKM:', error);
+    return dummyUMKM;
+  }
+}
+
+export async function saveUMKM(umkm: UMKM): Promise<void> {
+  const docRef = doc(db, 'umkm', umkm.id);
+  await setDoc(docRef, umkm);
+}
+
+export async function deleteUMKM(umkmId: string): Promise<void> {
+  // Delete the business
+  const docRef = doc(db, 'umkm', umkmId);
+  await deleteDoc(docRef);
+
+  // Delete all products inside this business
+  const prodCol = collection(db, 'products');
+  const q = query(prodCol, where('umkmId', '==', umkmId));
+  const qSnapshot = await getDocs(q);
+  
+  const batch = writeBatch(db);
+  qSnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  await batch.commit();
+}
+
+export async function getProducts(): Promise<Product[]> {
+  try {
+    const prodCol = collection(db, 'products');
+    const qSnapshot = await getDocs(prodCol);
+    
+    if (qSnapshot.empty) {
+      // Seed products
+      const batch = writeBatch(db);
+      dummyProducts.forEach((p) => {
+        const docRef = doc(prodCol, p.id);
+        batch.set(docRef, p);
+      });
+      await batch.commit();
+      return dummyProducts;
+    }
+
+    const list: Product[] = [];
+    qSnapshot.forEach((doc) => {
+      list.push(doc.data() as Product);
+    });
+    return list;
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return dummyProducts;
+  }
+}
+
+export async function saveProduct(product: Product): Promise<void> {
+  const docRef = doc(db, 'products', product.id);
+  await setDoc(docRef, product);
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  const docRef = doc(db, 'products', productId);
+  await deleteDoc(docRef);
+}
+
+// ==========================================
+// 4. NEWS / BERITA FUNCTIONS
+// ==========================================
+export async function getNews(): Promise<News[]> {
+  try {
+    const newsCol = collection(db, 'news');
+    const qSnapshot = await getDocs(newsCol);
+    
+    if (qSnapshot.empty) {
+      // Seed news
+      const batch = writeBatch(db);
+      dummyNews.forEach((n) => {
+        const docRef = doc(newsCol, n.id);
+        batch.set(docRef, n);
+      });
+      await batch.commit();
+      return dummyNews;
+    }
+
+    const list: News[] = [];
+    qSnapshot.forEach((doc) => {
+      list.push(doc.data() as News);
+    });
+    return list;
+  } catch (error) {
+    console.error('Error fetching news:', error);
+    return dummyNews;
+  }
+}
+
+export async function saveNewsItem(newsItem: News): Promise<void> {
+  const docRef = doc(db, 'news', newsItem.id);
+  await setDoc(docRef, newsItem);
+}
+
+export async function deleteNewsItem(newsId: string): Promise<void> {
+  const docRef = doc(db, 'news', newsId);
+  await deleteDoc(docRef);
+}
+
+// ==========================================
+// 5. ADMIN USERS FUNCTIONS
+// ==========================================
+export async function getAdminUsers(): Promise<User[]> {
+  try {
+    const usersCol = collection(db, 'admin_users');
+    const qSnapshot = await getDocs(usersCol);
+
+    const list: User[] = [];
+    qSnapshot.forEach((doc) => {
+      list.push(doc.data() as User);
+    });
+    return list;
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    return [];
+  }
+}
+
+export async function saveAdminUser(user: User): Promise<void> {
+  const docRef = doc(db, 'admin_users', user.id);
+  await setDoc(docRef, user);
+}
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  const docRef = doc(db, 'admin_users', userId);
+  await deleteDoc(docRef);
+}
+
+// ==========================================
+// 6. CONTACT INFO & MESSAGES FUNCTIONS
+// ==========================================
+export interface ContactInfo {
+  address: string;
+  phone: string;
+  email: string;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+}
+
+const defaultContactInfo: ContactInfo = {
+  address: 'Sambeng, Kelurahan Ngalang, Kapanewon Gedangsari, Kabupaten Gunungkidul, Daerah Istimewa Yogyakarta 55861',
+  phone: '6281234567890',
+  email: 'info@sambeng.desa.id',
+};
+
+export async function getContactInfo(): Promise<ContactInfo> {
+  try {
+    const docRef = doc(db, 'settings', 'contact');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as UMKMItem;
+      return docSnap.data() as ContactInfo;
+    } else {
+      await setDoc(docRef, defaultContactInfo);
+      return defaultContactInfo;
     }
-  } catch (err) {
-    console.error(`Firestore UMKM by id ${id} failed:`, err);
+  } catch (error) {
+    console.error('Error fetching contact info:', error);
+    return defaultContactInfo;
   }
-  const defaultItem = DEFAULT_UMKM.find((u) => u.id === id);
-  return defaultItem || null;
 }
 
-export async function getNews(): Promise<NewsItem[]> {
-  try {
-    const colRef = collection(db, "news");
-    const q = query(colRef, where("status", "==", "published"), orderBy("publishedAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      const items: NewsItem[] = [];
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        items.push({
-          id: docSnap.id,
-          ...data,
-          publishedAt: formatFirestoreDate(data.publishedAt),
-        } as NewsItem);
-      });
-      return items;
-    }
-  } catch (err) {
-    console.error("Firestore news load failed, trying unordered fallback:", err);
-    try {
-      const colRef = collection(db, "news");
-      const q = query(colRef, where("status", "==", "published"));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const items: NewsItem[] = [];
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          items.push({
-            id: docSnap.id,
-            ...data,
-            publishedAt: formatFirestoreDate(data.publishedAt),
-          } as NewsItem);
-        });
-        // Sort in memory instead
-        return items.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
-      }
-    } catch (e) {
-      console.error("Fallback news load failed:", e);
-    }
-  }
-  return DEFAULT_NEWS;
+export async function saveContactInfo(info: ContactInfo): Promise<void> {
+  const docRef = doc(db, 'settings', 'contact');
+  await setDoc(docRef, info);
 }
 
-export async function getNewsBySlug(slug: string): Promise<NewsItem | null> {
+export async function getContactMessages(): Promise<ContactMessage[]> {
   try {
-    const colRef = collection(db, "news");
-    const q = query(colRef, where("slug", "==", slug));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      const docSnap = querySnapshot.docs[0];
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        ...data,
-        publishedAt: formatFirestoreDate(data.publishedAt),
-      } as NewsItem;
-    }
-  } catch (err) {
-    console.error(`Firestore news by slug ${slug} failed:`, err);
+    const colRef = collection(db, 'messages');
+    const qSnapshot = await getDocs(colRef);
+    const list: ContactMessage[] = [];
+    qSnapshot.forEach((doc) => {
+      list.push(doc.data() as ContactMessage);
+    });
+    // Sort by newest first
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  } catch (error) {
+    console.error('Error fetching contact messages:', error);
+    return [];
   }
-  const defaultItem = DEFAULT_NEWS.find((n) => n.slug === slug);
-  return defaultItem || null;
 }
 
-export async function getEvents(): Promise<EventItem[]> {
-  try {
-    const colRef = collection(db, "events");
-    const q = query(colRef, where("isVisible", "==", true), orderBy("startDate", "asc"));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      const items: EventItem[] = [];
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        items.push({
-          id: docSnap.id,
-          ...data,
-          startDate: formatFirestoreDate(data.startDate),
-          endDate: formatFirestoreDate(data.endDate),
-        } as EventItem);
-      });
-      return items;
-    }
-  } catch (err) {
-    console.error("Firestore events load failed, trying unordered fallback:", err);
-    try {
-      const colRef = collection(db, "events");
-      const q = query(colRef, where("isVisible", "==", true));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const items: EventItem[] = [];
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          items.push({
-            id: docSnap.id,
-            ...data,
-            startDate: formatFirestoreDate(data.startDate),
-            endDate: formatFirestoreDate(data.endDate),
-          } as EventItem);
-        });
-        return items.sort((a, b) => a.startDate.localeCompare(b.startDate));
-      }
-    } catch (e) {
-      console.error("Fallback events load failed:", e);
-    }
-  }
-  return DEFAULT_EVENTS;
+export async function saveContactMessage(msg: ContactMessage): Promise<void> {
+  const docRef = doc(db, 'messages', msg.id);
+  await setDoc(docRef, msg);
 }
+
+export async function deleteContactMessage(msgId: string): Promise<void> {
+  const docRef = doc(db, 'messages', msgId);
+  await deleteDoc(docRef);
+}
+
