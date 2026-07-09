@@ -68,12 +68,12 @@ export default function AdminDashboardLayout({
   const allowed = hasAccess();
 
   return (
-    <div className="bg-zinc-50 text-zinc-800 min-h-screen flex">
+    <div className="bg-zinc-50 text-zinc-800 h-screen overflow-hidden flex">
       {/* Sidebar */}
       <AdminSidebar currentUser={currentUser} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen max-h-screen overflow-y-auto bg-zinc-50">
+      <div className="flex-1 flex flex-col h-full overflow-y-auto overflow-x-hidden bg-zinc-50">
         {/* Top Header */}
         <header className="h-16 border-b border-zinc-200 px-8 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md">
           <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, Phone, Mail } from 'lucide-react';
+import { getVillageProfile } from '@/lib/db';
 
 export default function Footer() {
   const [logoUrl, setLogoUrl] = useState<string>('');
@@ -21,6 +22,19 @@ export default function Footer() {
         setLogoUrl('');
       }
     }
+
+    const fetchProfile = async () => {
+      try {
+        const profile = await getVillageProfile();
+        if (profile) {
+          setLogoUrl(profile.logoUrl || '');
+          localStorage.setItem('sambeng_village_profile', JSON.stringify(profile));
+        }
+      } catch (e) {
+        console.error('Gagal memuat profil desa di Footer:', e);
+      }
+    };
+    fetchProfile();
   }, []);
 
   return (

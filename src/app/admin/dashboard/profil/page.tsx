@@ -22,6 +22,7 @@ export default function ProfilManagementPage() {
       try {
         const loaded = await getVillageProfile();
         setProfile(loaded);
+        localStorage.setItem('sambeng_village_profile', JSON.stringify(loaded));
       } catch (err) {
         console.error('Gagal memuat profil desa dari Firestore:', err);
       } finally {
@@ -42,6 +43,7 @@ export default function ProfilManagementPage() {
     setLoading(true);
     try {
       await saveVillageProfile(updated);
+      localStorage.setItem('sambeng_village_profile', JSON.stringify(updated));
       triggerSaveNotification();
     } catch (err) {
       alert('Gagal menyimpan profil desa di Firestore');

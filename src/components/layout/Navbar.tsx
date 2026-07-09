@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, LayoutDashboard } from 'lucide-react';
+import { getVillageProfile } from '@/lib/db';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [isTop, setIsTop] = useState(true);
   const pathname = usePathname();
+  const hasFetched = useRef(false);
 
   const navLinks = [
     { name: 'Beranda', href: '/' },
@@ -53,6 +55,22 @@ export default function Navbar() {
       } catch (e) {
         setLogoUrl('');
       }
+    }
+
+    if (!hasFetched.current) {
+      const fetchProfile = async () => {
+        try {
+          const profile = await getVillageProfile();
+          if (profile) {
+            setLogoUrl(profile.logoUrl || '');
+            localStorage.setItem('sambeng_village_profile', JSON.stringify(profile));
+            hasFetched.current = true;
+          }
+        } catch (e) {
+          console.error('Gagal memuat profil desa di Navbar:', e);
+        }
+      };
+      fetchProfile();
     }
   }, [pathname]);
 

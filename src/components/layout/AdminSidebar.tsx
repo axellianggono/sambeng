@@ -86,7 +86,7 @@ export default function AdminSidebar({ currentUser }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-zinc-200 text-zinc-650 flex flex-col justify-between shrink-0 h-screen sticky top-0">
+    <aside className="w-64 bg-white border-r border-zinc-200 text-zinc-650 flex flex-col justify-between shrink-0 h-full">
       <div>
         {/* Brand */}
         <div className="p-6 border-b border-zinc-200 flex items-center gap-2 text-zinc-800 font-bold">

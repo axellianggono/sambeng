@@ -30,6 +30,14 @@ import {
 // 1. VILLAGE PROFILE FUNCTIONS
 // ==========================================
 export async function getVillageProfile(): Promise<VillageProfile> {
+  const blankProfile: VillageProfile = {
+    description: 'Deskripsi profil padukuhan belum diisi. Silakan edit melalui CMS admin.',
+    statistics: [],
+    gallery: [],
+    logoUrl: '',
+    updatedAt: new Date().toISOString(),
+  };
+
   try {
     const profileRef = doc(db, 'profile', 'village');
     const docSnap = await getDoc(profileRef);
@@ -37,13 +45,12 @@ export async function getVillageProfile(): Promise<VillageProfile> {
     if (docSnap.exists()) {
       return docSnap.data() as VillageProfile;
     } else {
-      // Seed initial data
-      await setDoc(profileRef, dummyProfile);
-      return dummyProfile;
+      await setDoc(profileRef, blankProfile);
+      return blankProfile;
     }
   } catch (error) {
     console.error('Error fetching village profile from Firestore:', error);
-    return dummyProfile;
+    return blankProfile;
   }
 }
 
@@ -60,17 +67,6 @@ export async function getOrganizations(): Promise<Organization[]> {
     const orgsCol = collection(db, 'organizations');
     const qSnapshot = await getDocs(orgsCol);
     
-    if (qSnapshot.empty) {
-      // Seed organizations
-      const batch = writeBatch(db);
-      dummyOrganizations.forEach((org) => {
-        const docRef = doc(orgsCol, org.id);
-        batch.set(docRef, org);
-      });
-      await batch.commit();
-      return dummyOrganizations;
-    }
-
     const list: Organization[] = [];
     qSnapshot.forEach((doc) => {
       list.push(doc.data() as Organization);
@@ -78,7 +74,7 @@ export async function getOrganizations(): Promise<Organization[]> {
     return list;
   } catch (error) {
     console.error('Error fetching organizations:', error);
-    return dummyOrganizations;
+    return [];
   }
 }
 
@@ -109,17 +105,6 @@ export async function getOrganizationDetails(): Promise<OrganizationDetail[]> {
     const detailsCol = collection(db, 'organization_details');
     const qSnapshot = await getDocs(detailsCol);
     
-    if (qSnapshot.empty) {
-      // Seed organization details
-      const batch = writeBatch(db);
-      dummyOrganizationDetails.forEach((member) => {
-        const docRef = doc(detailsCol, member.id);
-        batch.set(docRef, member);
-      });
-      await batch.commit();
-      return dummyOrganizationDetails;
-    }
-
     const list: OrganizationDetail[] = [];
     qSnapshot.forEach((doc) => {
       list.push(doc.data() as OrganizationDetail);
@@ -127,7 +112,7 @@ export async function getOrganizationDetails(): Promise<OrganizationDetail[]> {
     return list;
   } catch (error) {
     console.error('Error fetching organization details:', error);
-    return dummyOrganizationDetails;
+    return [];
   }
 }
 
@@ -160,17 +145,6 @@ export async function getUMKMs(): Promise<UMKM[]> {
     const umkmCol = collection(db, 'umkm');
     const qSnapshot = await getDocs(umkmCol);
     
-    if (qSnapshot.empty) {
-      // Seed UMKM
-      const batch = writeBatch(db);
-      dummyUMKM.forEach((u) => {
-        const docRef = doc(umkmCol, u.id);
-        batch.set(docRef, u);
-      });
-      await batch.commit();
-      return dummyUMKM;
-    }
-
     const list: UMKM[] = [];
     qSnapshot.forEach((doc) => {
       list.push(doc.data() as UMKM);
@@ -178,7 +152,7 @@ export async function getUMKMs(): Promise<UMKM[]> {
     return list;
   } catch (error) {
     console.error('Error fetching UMKM:', error);
-    return dummyUMKM;
+    return [];
   }
 }
 
@@ -209,17 +183,6 @@ export async function getProducts(): Promise<Product[]> {
     const prodCol = collection(db, 'products');
     const qSnapshot = await getDocs(prodCol);
     
-    if (qSnapshot.empty) {
-      // Seed products
-      const batch = writeBatch(db);
-      dummyProducts.forEach((p) => {
-        const docRef = doc(prodCol, p.id);
-        batch.set(docRef, p);
-      });
-      await batch.commit();
-      return dummyProducts;
-    }
-
     const list: Product[] = [];
     qSnapshot.forEach((doc) => {
       list.push(doc.data() as Product);
@@ -227,7 +190,7 @@ export async function getProducts(): Promise<Product[]> {
     return list;
   } catch (error) {
     console.error('Error fetching products:', error);
-    return dummyProducts;
+    return [];
   }
 }
 
@@ -249,17 +212,6 @@ export async function getNews(): Promise<News[]> {
     const newsCol = collection(db, 'news');
     const qSnapshot = await getDocs(newsCol);
     
-    if (qSnapshot.empty) {
-      // Seed news
-      const batch = writeBatch(db);
-      dummyNews.forEach((n) => {
-        const docRef = doc(newsCol, n.id);
-        batch.set(docRef, n);
-      });
-      await batch.commit();
-      return dummyNews;
-    }
-
     const list: News[] = [];
     qSnapshot.forEach((doc) => {
       list.push(doc.data() as News);
@@ -267,7 +219,7 @@ export async function getNews(): Promise<News[]> {
     return list;
   } catch (error) {
     console.error('Error fetching news:', error);
-    return dummyNews;
+    return [];
   }
 }
 
@@ -335,18 +287,24 @@ const defaultContactInfo: ContactInfo = {
 };
 
 export async function getContactInfo(): Promise<ContactInfo> {
+  const blankContactInfo: ContactInfo = {
+    address: 'Alamat Balai Padukuhan belum diisi.',
+    phone: '628',
+    email: 'admin@desa.id',
+  };
+
   try {
     const docRef = doc(db, 'settings', 'contact');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return docSnap.data() as ContactInfo;
     } else {
-      await setDoc(docRef, defaultContactInfo);
-      return defaultContactInfo;
+      await setDoc(docRef, blankContactInfo);
+      return blankContactInfo;
     }
   } catch (error) {
     console.error('Error fetching contact info:', error);
-    return defaultContactInfo;
+    return blankContactInfo;
   }
 }
 

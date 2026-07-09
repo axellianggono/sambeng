@@ -31,7 +31,7 @@ export default function ConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 w-screen h-screen z-[100] flex items-center justify-center p-4 bg-zinc-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl border border-zinc-200 p-6 sm:p-8 max-w-sm w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
         <div>
           <h3 className="text-lg font-bold text-zinc-900">{title}</h3>
