@@ -1,49 +1,64 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
 import { getNews } from '@/lib/db';
-import { News } from '@/lib/dummy-data';
 import { Calendar, User, ArrowLeft, ChevronRight, Newspaper } from 'lucide-react';
+import { Metadata } from 'next';
+import { News } from '@/lib/dummy-data';
 
-export default function BeritaDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const slug = params.slug as string;
+interface Props {
+  params: Promise<{ slug: string }>;
+}
 
-  const [news, setNews] = useState<News | null>(null);
-  const [otherNews, setOtherNews] = useState<News[]>([]);
-  const [loading, setLoading] = useState(true);
+export const revalidate = 60; // revalidate every 60 seconds
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const loadedNews = await getNews();
-        const found = loadedNews.find((item) => item.slug === slug);
-        if (found) {
-          setNews(found);
-          const others = loadedNews
-            .filter((item) => item.id !== found.id && item.isPublished)
-            .slice(0, 2);
-          setOtherNews(others);
-        }
-      } catch (err) {
-        console.error('Gagal memuat berita detail:', err);
-      } finally {
-        setLoading(false);
-      }
+// 1. GENERATE METADATA DINAMIS
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const loadedNews = await getNews();
+    const news = loadedNews.find((item) => item.slug === slug);
+    if (!news) {
+      return {
+        title: 'Berita Tidak Ditemukan',
+      };
     }
-    loadData();
-  }, [slug]);
+    // Bersihkan HTML tag untuk meta description
+    const plainDescription = news.content
+      .replace(/<[^>]*>/g, '')
+      .substring(0, 150) + '...';
 
-  if (loading) {
-    return (
-      <div className="bg-zinc-50 dark:bg-zinc-950 min-h-screen pt-28 pb-16 flex items-center justify-center">
-        <p className="text-zinc-500 italic">Memuat detail berita...</p>
-      </div>
-    );
+    return {
+      title: news.title,
+      description: plainDescription,
+      openGraph: {
+        title: news.title,
+        description: plainDescription,
+        images: [{ url: news.imageUrl }],
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Detail Berita',
+    };
+  }
+}
+
+export default async function BeritaDetailPage({ params }: Props) {
+  const { slug } = await params;
+  let news: News | null = null;
+  let otherNews: News[] = [];
+
+  try {
+    const loadedNews = await getNews();
+    const found = loadedNews.find((item) => item.slug === slug);
+    if (found) {
+      news = found;
+      otherNews = loadedNews
+        .filter((item) => item.id !== found.id && item.isPublished)
+        .slice(0, 2);
+    }
+  } catch (err) {
+    console.error('Gagal memuat berita detail di server:', err);
   }
 
   if (!news) {
@@ -70,15 +85,15 @@ export default function BeritaDetailPage() {
     <div className="bg-zinc-50 dark:bg-zinc-950 min-h-screen pt-28 pb-16 sm:pt-36 sm:pb-24">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Breadcrumb & Back */}
+        {/* Breadcrumb & Back Link */}
         <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => router.back()}
+          <Link
+            href="/berita"
             className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Kembali</span>
-          </button>
+          </Link>
           <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-450 dark:text-zinc-500">
             <Link href="/" className="hover:text-emerald-600">Beranda</Link>
             <ChevronRight className="h-3 w-3" />

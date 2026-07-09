@@ -1,29 +1,29 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { dummyProfile as initialProfile, VillageProfile } from '@/lib/dummy-data';
+import React from 'react';
 import { Calendar } from 'lucide-react';
 import { getVillageProfile } from '@/lib/db';
+import { Metadata } from 'next';
+import { VillageProfile } from '@/lib/dummy-data';
 
-export default function ProfilPage() {
-  const [profile, setProfile] = useState<VillageProfile | null>(null);
+export const revalidate = 60; // revalidate every 60 seconds
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const loaded = await getVillageProfile();
-        setProfile(loaded);
-      } catch (err) {
-        console.error('Gagal memuat profil desa di halaman publik:', err);
-      }
-    }
-    loadData();
-  }, []);
+export const metadata: Metadata = {
+  title: 'Profil Padukuhan',
+  description: 'Sejarah, statistik demografi, dan galeri visual keindahan alam Padukuhan Sambeng.',
+};
+
+export default async function ProfilPage() {
+  let profile: VillageProfile | null = null;
+
+  try {
+    profile = await getVillageProfile();
+  } catch (err) {
+    console.error('Gagal memuat profil desa di server:', err);
+  }
 
   if (!profile) {
     return (
       <div className="bg-zinc-50 dark:bg-zinc-950 min-h-screen pt-28 pb-16 flex items-center justify-center">
-        <p className="text-zinc-500 italic">Memuat profil desa...</p>
+        <p className="text-zinc-500 italic">Profil desa tidak dapat dimuat.</p>
       </div>
     );
   }

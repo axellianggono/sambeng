@@ -1,34 +1,28 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Landmark, Users, ShoppingBag, Newspaper, ChevronRight } from 'lucide-react';
 import { getVillageProfile, getNews } from '@/lib/db';
 import { News, VillageProfile } from '@/lib/dummy-data';
 
-export default function HomePage() {
-  const [profile, setProfile] = useState<VillageProfile | null>(null);
-  const [latestNews, setLatestNews] = useState<News[]>([]);
+export const revalidate = 60; // revalidate every 60 seconds
+
+export default async function HomePage() {
+  let profile: VillageProfile | null = null;
+  let latestNews: News[] = [];
+
+  try {
+    profile = await getVillageProfile();
+    const loadedNews = await getNews();
+    // Filter published news and sort by date descending
+    latestNews = loadedNews
+      .filter((n) => n.isPublished)
+      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+      .slice(0, 3);
+  } catch (err) {
+    console.error('Gagal memuat data beranda dari Firestore:', err);
+  }
+
   const mainStats = profile?.statistics.slice(0, 3) || [];
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const loadedProfile = await getVillageProfile();
-        setProfile(loadedProfile);
-
-        const loadedNews = await getNews();
-        // Filter published news and sort by date descending
-        const publishedNews = loadedNews
-          .filter((n) => n.isPublished)
-          .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-        setLatestNews(publishedNews.slice(0, 3));
-      } catch (err) {
-        console.error('Gagal memuat data beranda dari Firestore:', err);
-      }
-    }
-    loadData();
-  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -41,7 +35,6 @@ export default function HomePage() {
             className="w-full h-full object-cover"
           />
         </div>
-        
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white mb-6">
