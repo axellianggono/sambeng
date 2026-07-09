@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { News, User } from '@/lib/dummy-data';
-import { Plus, Trash2, FileText, Globe, Eye, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, FileText, Globe, Eye, CheckCircle, Edit } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { uploadImage } from '@/lib/upload';
 
@@ -28,6 +28,7 @@ export default function BeritaManagementPage() {
   const [newsList, setNewsList] = useState<News[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingNewsId, setEditingNewsId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
@@ -101,42 +102,78 @@ export default function BeritaManagementPage() {
     });
   };
 
-  // Add new article
-  const handleAddNews = async (e: React.FormEvent) => {
+  // Add or Edit article
+  const handleSaveNews = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.content) return;
 
-    const newArticle: News = {
-      id: `news-${Date.now()}`,
-      title: formData.title,
-      slug: formData.slug || 'judul-berita-baru',
-      content: formData.content,
-      imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1434626881859-194d67b2b86f?w=800&auto=format&fit=crop&q=60',
-      authorId: currentUser?.id || 'user-1',
-      authorName: currentUser?.name || 'Budi Santoso',
-      publishedAt: new Date().toISOString(),
-      isPublished: formData.isPublished,
-    };
-
     setLoading(true);
     try {
-      await saveNewsItem(newArticle);
+      if (editingNewsId) {
+        // Edit Mode
+        const existing = newsList.find((n) => n.id === editingNewsId);
+        if (!existing) return;
+
+        const updatedArticle: News = {
+          ...existing,
+          title: formData.title,
+          slug: formData.slug || existing.slug,
+          content: formData.content,
+          imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1434626881859-194d67b2b86f?w=800&auto=format&fit=crop&q=60',
+          isPublished: formData.isPublished,
+        };
+        await saveNewsItem(updatedArticle);
+      } else {
+        // Add Mode
+        const newArticle: News = {
+          id: `news-${Date.now()}`,
+          title: formData.title,
+          slug: formData.slug || 'judul-berita-baru',
+          content: formData.content,
+          imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1434626881859-194d67b2b86f?w=800&auto=format&fit=crop&q=60',
+          authorId: currentUser?.id || 'user-1',
+          authorName: currentUser?.name || 'Budi Santoso',
+          publishedAt: new Date().toISOString(),
+          isPublished: formData.isPublished,
+        };
+        await saveNewsItem(newArticle);
+      }
+
       const updated = await getNews();
       setNewsList(updated.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()));
-      setFormData({
-        title: '',
-        slug: '',
-        content: '',
-        imageUrl: '',
-        isPublished: true,
-      });
-      setShowAddForm(false);
+      handleCloseForm();
       triggerSaveNotification();
     } catch (err) {
-      alert('Gagal mempublikasikan berita di Firestore');
+      alert('Gagal menyimpan berita di Firestore');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Open Edit Form
+  const handleEditClick = (article: News) => {
+    setFormData({
+      title: article.title,
+      slug: article.slug,
+      content: article.content,
+      imageUrl: article.imageUrl || '',
+      isPublished: article.isPublished,
+    });
+    setEditingNewsId(article.id);
+    setShowAddForm(true);
+  };
+
+  // Close Form and Reset State
+  const handleCloseForm = () => {
+    setFormData({
+      title: '',
+      slug: '',
+      content: '',
+      imageUrl: '',
+      isPublished: true,
+    });
+    setEditingNewsId(null);
+    setShowAddForm(false);
   };
 
   // Delete article
@@ -234,7 +271,10 @@ export default function BeritaManagementPage() {
         </div>
         {!showAddForm && (
           <Button
-            onClick={() => setShowAddForm(true)}
+            onClick={() => {
+              setEditingNewsId(null);
+              setShowAddForm(true);
+            }}
             variant="primary"
             icon={<Plus className="h-4.5 w-4.5" />}
             disabled={loading}
@@ -250,17 +290,17 @@ export default function BeritaManagementPage() {
           <div className="flex items-center justify-between border-b border-zinc-250 pb-3">
             <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
               <FileText className="h-5 w-5 text-emerald-600" />
-              <span>Tulis Artikel Berita Baru</span>
+              <span>{editingNewsId ? 'Ubah Artikel Berita' : 'Tulis Artikel Berita Baru'}</span>
             </h3>
             <button
-              onClick={() => setShowAddForm(false)}
+              onClick={handleCloseForm}
               className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-400 cursor-pointer"
             >
               Tutup
             </button>
           </div>
 
-          <form onSubmit={handleAddNews} className="space-y-4">
+          <form onSubmit={handleSaveNews} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Judul Berita"
@@ -326,7 +366,7 @@ export default function BeritaManagementPage() {
             <div className="pt-4 border-t border-zinc-200 flex justify-end gap-3">
               <Button
                 variant="secondary"
-                onClick={() => setShowAddForm(false)}
+                onClick={handleCloseForm}
                 disabled={loading}
               >
                 Batal
@@ -336,7 +376,7 @@ export default function BeritaManagementPage() {
                 variant="primary"
                 isLoading={loading}
               >
-                Simpan & Terbitkan
+                {editingNewsId ? 'Simpan Perubahan' : 'Simpan & Terbitkan'}
               </Button>
             </div>
           </form>
@@ -417,6 +457,13 @@ export default function BeritaManagementPage() {
                     >
                       <Eye className="h-4.5 w-4.5" />
                     </Link>
+                    <button
+                      onClick={() => handleEditClick(news)}
+                      className="p-2 text-zinc-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                      title="Ubah Berita"
+                    >
+                      <Edit className="h-4.5 w-4.5" />
+                    </button>
                     <button
                       onClick={() => handleDeleteNewsClick(news)}
                       className="p-2 text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
