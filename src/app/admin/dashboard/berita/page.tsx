@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { News } from '@/lib/dummy-data';
+import { News, User } from '@/lib/dummy-data';
 import { Plus, Trash2, FileText, Globe, Eye, CheckCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { uploadImage } from '@/lib/upload';
@@ -26,6 +26,7 @@ import 'react-quill-new/dist/quill.snow.css';
 
 export default function BeritaManagementPage() {
   const [newsList, setNewsList] = useState<News[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -54,8 +55,18 @@ export default function BeritaManagementPage() {
     onConfirm: () => {},
   });
 
-  // Load from Firestore
+  // Load from Firestore and localStorage
   useEffect(() => {
+    // Load currentUser from localStorage
+    const savedUser = localStorage.getItem('sambeng_admin_user');
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (err) {
+        console.error('Gagal membaca data sesi admin:', err);
+      }
+    }
+
     async function loadData() {
       setLoading(true);
       try {
@@ -101,8 +112,8 @@ export default function BeritaManagementPage() {
       slug: formData.slug || 'judul-berita-baru',
       content: formData.content,
       imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1434626881859-194d67b2b86f?w=800&auto=format&fit=crop&q=60',
-      authorId: 'user-1',
-      authorName: 'Budi Santoso',
+      authorId: currentUser?.id || 'user-1',
+      authorName: currentUser?.name || 'Budi Santoso',
       publishedAt: new Date().toISOString(),
       isPublished: formData.isPublished,
     };
