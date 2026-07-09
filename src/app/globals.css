@@ -12,6 +12,19 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Custom intermediary shades of zinc */
+  --color-zinc-150: #ececee;
+  --color-zinc-250: #dadade;
+  --color-zinc-350: #bcbcbf;
+  --color-zinc-450: #89898e;
+  --color-zinc-550: #636367;
+  --color-zinc-650: #4b4b52;
+  --color-zinc-750: #333336;
+  --color-zinc-850: #202022;
+
+  /* Custom intermediary shades of red */
+  --color-red-650: #c62020;
 }
 
 body {

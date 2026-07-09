@@ -540,7 +540,7 @@ function BaganEditorContent() {
                     type="button"
                     onClick={openEditMemberModal}
                     variant="outline"
-                    className="w-full text-xs font-bold py-1.5 text-emerald-700 hover:bg-emerald-600 hover:text-white"
+                    className="w-full text-xs font-bold py-1.5"
                   >
                     Ubah Jabatan/Pengurus
                   </Button>
