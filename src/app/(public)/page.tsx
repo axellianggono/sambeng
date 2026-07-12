@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { ArrowRight, Landmark, Users, ShoppingBag, Newspaper, ChevronRight } from 'lucide-react';
 import { getVillageProfile, getNews } from '@/lib/db';
 import { News, VillageProfile } from '@/lib/dummy-data';
+import InstagramFeed from '@/components/InstagramFeed';
+
 
 export const revalidate = 60; // revalidate every 60 seconds
 
@@ -144,6 +146,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Instagram Feed Section */}
+      <InstagramFeed />
 
       {/* Latest News Section */}
       <section className="py-20 bg-white dark:bg-zinc-900">
